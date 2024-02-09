@@ -17,6 +17,22 @@ game_state = {
     'battles': {},  # Stores ongoing battles
     'queue': Queue()  # Queue for users waiting to play
 }
+def fetch_random_pokemon(count):
+    # Assume there's a known number of Pokémon.
+    # Use the latest number from the PokeAPI documentation or your own data.
+    total_pokemon = 1300  # Replace with the current total number of Pokémon
+    random_ids = random.sample(range(1, total_pokemon + 1), count)
+    pokemon_data = []
+    
+    for pokemon_id in random_ids:
+        pokemon_info = Pokemon.fetch_pokemon_data(pokemon_id)
+        if pokemon_info:
+            pokemon_data.append(pokemon_info)
+        else:
+            # If a Pokemon is not found, handle it appropriately, maybe log the error
+            pass  # Or continue, or break, depending on your error handling strategy
+
+    return pokemon_data
 
 # A class to represent a Pokemon
 class Pokemon:
@@ -49,7 +65,7 @@ class Pokemon:
             }
         except requests.RequestException as e:
             print(f"An error occurred while fetching data: {e}")
-            return None 
+            return None
         
 # Routes for your game
 @app.route('/choose-trainer', methods=['POST'])
@@ -76,24 +92,36 @@ def choose_trainer():
     return jsonify({'message': 'Trainer created successfully', 'trainer_name': trainer_name}), 200
 
 
-@app.route('/select-pokemon', methods=['GET'])
+@app.route('/select-pokemon', methods=['GET', 'POST'])
 def select_pokemon():
-    # Fetch 20 random Pokémon from PokeAPI
-    pokemon_list = fetch_random_pokemon(20)
-    session['available_pokemon'] = pokemon_list
-    return jsonify(pokemon_list)
+    session_id = request.cookies.get('session')
+    if request.method == 'GET':
+        # Fetch 20 random Pokémon from PokeAPI
+        pokemon_list = fetch_random_pokemon(20)
+        session['available_pokemon'] = pokemon_list
+        return jsonify(pokemon_list)
+    elif request.method == 'POST':
+        # User submits their selected Pokémon
+        selected_pokemon_ids = request.json.get('selected_pokemon')
+        if not selected_pokemon_ids:
+            return jsonify({'error': 'No Pokémon selected'}), 400
+        if len(selected_pokemon_ids) != 5:  # Assuming each trainer selects 5 Pokémon
+            return jsonify({'error': 'Incorrect number of Pokémon selected'}), 400
 
-def fetch_random_pokemon(count):
-    # Assume there's a known number of Pokémon. For example, 898 for Pokémon up to Gen 8.
-    total_pokemon = 1300
-    random_ids = random.sample(range(1, total_pokemon+1), count)
-    pokemon_data = []
-    
-    for pokemon_id in random_ids:
-        data = Pokemon.fetch_pokemon_data(pokemon_id)
-        pokemon_data.append(data)
+        trainer = game_state['trainers'].get(session_id)
+        if not trainer:
+            return jsonify({'error': 'Trainer not found'}), 404
+        
+        for pokemon_id in selected_pokemon_ids:
+            pokemon_data = Pokemon.fetch_pokemon_data(pokemon_id)
+            if pokemon_data:
+                trainer.team.append(pokemon_data)
+            else:
+                # Handle the error if Pokémon data is not found
+                return jsonify({'error': f'Pokémon with id {pokemon_id} not found'}), 404
+        
+        return jsonify({'message': 'Pokémon selected successfully'}), 200
 
-    return pokemon_data
 
 @app.route('/battle-arena')
 def battle_arena():
