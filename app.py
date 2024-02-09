@@ -1,12 +1,19 @@
-from flask import Flask, session
+from flask import Flask, jsonify, request, session
+import random
 from queue import Queue
 import requests
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  
+class Trainer:
+    def __init__(self, trainer_name, session_id):
+        self.trainer_name = trainer_name
+        self.session_id = session_id
+        self.team = []  # List to store selected Pokémon
+        self.status = 'waiting'  # Can be 'waiting', 'in_battle', or 'observing'
 
 # A dictionary to maintain the state of the game
 game_state = {
-    'users': {},  # Stores user data
+    'trainers': {},  # Stores Trainer objects by session_id
     'battles': {},  # Stores ongoing battles
     'queue': Queue()  # Queue for users waiting to play
 }
@@ -45,10 +52,29 @@ class Pokemon:
             return None 
         
 # Routes for your game
-@app.route('/choose-trainer')
+@app.route('/choose-trainer', methods=['POST'])
 def choose_trainer():
-    # Logic for choosing trainer name
-    pass
+    trainer_name = request.json.get('trainer_name')
+    if not trainer_name:
+        return jsonify({'error': 'Trainer name is required'}), 400
+
+    session_id = request.cookies.get('session')  # Or however you are managing sessions
+
+    if session_id in game_state['trainers']:
+        return jsonify({'error': 'This session already has a trainer'}), 400
+
+    if trainer_name in (trainer.trainer_name for trainer in game_state['trainers'].values()):
+        return jsonify({'error': 'Trainer name is already taken'}), 400
+
+    # Create a new trainer
+    new_trainer = Trainer(trainer_name, session_id)
+    game_state['trainers'][session_id] = new_trainer
+
+    # Optionally, add the trainer to the queue
+    game_state['queue'].put(new_trainer)
+
+    return jsonify({'message': 'Trainer created successfully', 'trainer_name': trainer_name}), 200
+
 
 @app.route('/select-pokemon', methods=['GET'])
 def select_pokemon():
