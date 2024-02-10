@@ -10,7 +10,7 @@ socketio = SocketIO(app)
 app.secret_key = 'your_secret_key'  
 queue_lock = Lock()
 class Trainer:
-    def __init__(self, trainer_name, session_id):
+    def __init__(self, trainer_name):
         self.trainer_name = trainer_name
         self.session_id = trainer_name
         self.team = []  
@@ -63,10 +63,83 @@ def fetch_random_pokemon(count):
         if pokemon_info:
             pokemon_data.append(pokemon_info)
         else:
-            # If a Pokemon is not found, handle it appropriately, maybe log the error
-            pass  # Or continue, or break, depending on your error handling strategy
+            #TODO Consider adding logic here for when a pokemon is not found
+            pass  
 
     return pokemon_data
+class Pokemon:
+
+    def __init__(self, name, image, moves, hp):
+        self.name = name
+        self.image = image
+        self.moves = moves 
+        self.current_hp = hp
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "image": self.image,
+            "moves": [move.to_dict() for move in self.moves],
+            "current_hp": self.current_hp
+        }
+
+    @staticmethod
+    def fetch_pokemon_data(pokemon_id):
+        number_of_moves = 4
+        try:
+         
+            pokemon_response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_id}')
+            pokemon_response.raise_for_status()
+            pokemon_data = pokemon_response.json()
+
+            name = pokemon_data['name']
+            image = pokemon_data['sprites']['front_default']
+            hp = next(stat['base_stat'] for stat in pokemon_data['stats'] if stat['stat']['name'] == 'hp')
+
+            # Fetch a random subset of moves
+            move_urls = [move_info['move']['url'] for move_info in pokemon_data['moves']]
+            random_move_urls = random.sample(move_urls, min(len(move_urls), number_of_moves))  
+
+
+            moves = []
+            for move_url in random_move_urls:
+                move_response = requests.get(move_url)
+                move_response.raise_for_status()
+                move_data = move_response.json()
+
+                move = Move(
+                    name=move_data['name'],
+                    power=move_data.get('power', 0),  
+                    accuracy=move_data.get('accuracy', 0),  
+                    type=move_data['type']['name']
+                )
+                moves.append(move)
+
+            # Return a new Pokemon instance with the fetched data
+            return Pokemon(name, image, moves, hp)
+        except requests.RequestException as e:
+            print(f"An error occurred while fetching data: {e}")
+            return None
+
+class Move:
+    def __init__(self, name, power, pp, accuracy, move_type):
+        self.name = name
+        self.power = power
+        self.pp = pp
+        self.accuracy = accuracy
+        self.type = move_type
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "power": self.power,
+            "pp": self.pp,
+            "accuracy": self.accuracy,
+            "type": self.type
+        }
+
+
+   
 class Battle:
     def __init__(self, trainer1, trainer2):
         self.trainer1 = trainer1
@@ -92,8 +165,11 @@ class Battle:
         self.switch_turn()
 
     def apply_ability(self, ability, user_pokemon, target_pokemon):
-        # Implement the logic to apply the selected ability's effects
-        pass
+        damage = self.calculate_damage(ability, user_pokemon, target_pokemon)
+        target_pokemon['current_hp'] -= damage
+        if target_pokemon['current_hp'] <= 0:
+            self.handle_fainted_pokemon(target_pokemon)
+
 
     def is_battle_over(self):
         # Placeholder logic to determine if the battle is over
@@ -126,10 +202,7 @@ class Battle:
 
 @app.route('/game-state', methods=['GET'])
 def get_game_state():
-   # Convert trainers to a serializable format
     trainers_dict = {session_id: trainer.to_dict() for session_id, trainer in game_state["trainers"].items()}
-    
-    # Assuming you also need to serialize Battle objects, do similarly
     battles_dict = {}
     for battle_id, battle in game_state["battles"].items():
         battles_dict[battle_id] = {
@@ -137,7 +210,6 @@ def get_game_state():
             "trainer2": battle.trainer2.to_dict(),
             "turn": battle.turn,
             "state": battle.state
-            # Add other necessary fields from your Battle class
         }
 
     return jsonify({"battles": battles_dict, "trainers": trainers_dict})
@@ -168,43 +240,8 @@ def battle_arena():
     else:
         return jsonify({'error': 'Not your turn'}), 403
 
-class Pokemon:
-    def __init__(self, name, image, abilities, hp):
-        self.name = name
-        self.image = image
-        self.abilities = abilities
-        self.current_hp = hp
-    def to_dict(self):
-        return {
-            "name": self.name,
-            "image": self.image,
-            "abilities": self.abilities,
-            "current_hp": self.current_hp
-            # Include other fields as needed
-        }
-    @staticmethod
-    def fetch_pokemon_data(pokemon_id):
-        try:
-            response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_id}')
-            response.raise_for_status()  # Will raise an exception for HTTP errors
-            data = response.json()
+     
 
-            name = data['name']
-            image = data['sprites']['front_default']  # You can choose other images too
-            abilities = [ability['ability']['name'] for ability in data['abilities']]
-            hp = next(stat['base_stat'] for stat in data['stats'] if stat['stat']['name'] == 'hp')
-
-            return {
-                'name': name,
-                'image': image,
-                'abilities': abilities,
-                'hp': hp
-            }
-        except requests.RequestException as e:
-            print(f"An error occurred while fetching data: {e}")
-            return None
-        
-# Routes for your game
 @app.route('/choose-trainer', methods=['POST'])
 def choose_trainer():
     trainer_name = request.json.get('trainer_name')
