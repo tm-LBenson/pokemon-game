@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pokémon Battle Game</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://unpkg.com/htmx.org"></script>
+  </head>
+  <body>
+    <div class="grid-container">
+      <!-- Trainer Registration -->
+      <div id="trainer-registration">
+        <h2 id="trainer-name-display">Register as Trainer</h2>
+        <form
+          hx-post="/choose-trainer"
+          hx-target="#trainer-name-display"
+          hx-swap="outerHTML"
+        >
+          <input
+            type="text"
+            name="trainer_name"
+            placeholder="Enter your trainer name"
+            required
+          />
+          <button type="submit">Register</button>
+        </form>
+      </div>
+
+      <!-- Pokémon Selection -->
+      <div id="pokemon-selection" class="pokemon-selection"></div>
+
+      <!-- Battle Area -->
+      <div id="battle-area" class="battle-area">
+        <h2>Battle Area</h2>
+        <div class="battle-status">
+          <!-- Updated via SocketIO -->
+        </div>
+      </div>
+
+      <!-- Queue Status -->
+      <div id="queue-status" class="queue-status">
+        <h2>Queue to Battle</h2>
+        <!-- Updated via SocketIO -->
+      </div>
+
+      <!-- Chat Window -->
+      <div id="chat-window" class="chat-window">
+        <h2>Chat</h2>
+        <div id="chat-messages">
+          <!-- Messages will be appended here -->
+          {% for message in message_history %}
+          <p>{{ message.message }}</p>
+          {% endfor %}
+        </div>
+
+        <input type="text" id="chat-input" placeholder="Type a message..." />
+        <button id="send-button">Send</button>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="/static/js/script.js"></script>
+  </body>
+</html>

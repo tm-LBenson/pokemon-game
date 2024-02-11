@@ -1,18 +1,45 @@
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, render_template,render_template_string
 import random
 from threading import Lock
 from queue import Queue
 import requests
 import json
+import uuid
+from flask_cors import CORS
+
 from flask_socketio import SocketIO, emit
+
 app = Flask(__name__)
+CORS(app)
+
 socketio = SocketIO(app)
+
+
+
 app.secret_key = 'your_secret_key'  
 queue_lock = Lock()
+
+message_history = []
+@socketio.on('connect')
+def on_connect():
+
+    for message_data in message_history:
+        emit('receive_message', message_data)
+
+@socketio.on('send_message')
+def handle_send_message_event(data):
+    message_history.append({
+        'message': data['message'],
+        'username': data['username']
+       })
+    emit('receive_message', {
+        'message': data['message'],
+        'username': data['username']
+       }, broadcast=True)
 class Trainer:
     def __init__(self, trainer_name):
         self.trainer_name = trainer_name
-        self.session_id = trainer_name
+        self.session_id = self.get_uuid()
         self.team = []  
         self.status = 'waiting'  
 
@@ -23,6 +50,12 @@ class Trainer:
             "team": [pokemon.to_dict() for pokemon in self.team] if self.team else [],
             "status": self.status
         }
+    @staticmethod
+    def get_uuid():
+        new_uuid = uuid.uuid4()
+        uuid_str = str(new_uuid)
+        return uuid_str
+        
 
 game_state = {
     'trainers': {},
@@ -54,7 +87,7 @@ def init_matchmaking():
 init_matchmaking()
 
 def fetch_random_pokemon(count):
-    total_pokemon = 1300 
+    total_pokemon = 600
     random_ids = random.sample(range(1, total_pokemon + 1), count)
     pokemon_data = []
     
@@ -63,7 +96,6 @@ def fetch_random_pokemon(count):
         if pokemon_info:
             pokemon_data.append(pokemon_info)
         else:
-            #TODO Consider adding logic here for when a pokemon is not found
             pass  
 
     return pokemon_data
@@ -74,18 +106,22 @@ class Pokemon:
         self.image = image
         self.moves = moves 
         self.current_hp = hp
+        self.index = -1
+
 
     def to_dict(self):
         return {
             "name": self.name,
             "image": self.image,
             "moves": [move.to_dict() for move in self.moves],
-            "current_hp": self.current_hp
+            "current_hp": self.current_hp,
+            "index": self.index
         }
 
     @staticmethod
     def fetch_pokemon_data(pokemon_id):
         number_of_moves = 4
+
         try:
          
             pokemon_response = requests.get(f'https://pokeapi.co/api/v2/pokemon/{pokemon_id}')
@@ -106,17 +142,19 @@ class Pokemon:
                 move_response = requests.get(move_url)
                 move_response.raise_for_status()
                 move_data = move_response.json()
-
+            
                 move = Move(
                     name=move_data['name'],
                     power=move_data.get('power', 0),  
+                    pp=move_data.get('pp', 0), 
                     accuracy=move_data.get('accuracy', 0),  
-                    type=move_data['type']['name']
+                    move_type=move_data["type"]["name"]
                 )
                 moves.append(move)
+            new_pokemon = Pokemon(name, image, moves, hp)
 
             # Return a new Pokemon instance with the fetched data
-            return Pokemon(name, image, moves, hp)
+            return new_pokemon
         except requests.RequestException as e:
             print(f"An error occurred while fetching data: {e}")
             return None
@@ -127,7 +165,7 @@ class Move:
         self.power = power
         self.pp = pp
         self.accuracy = accuracy
-        self.type = move_type
+        self.move_type = move_type  
 
     def to_dict(self):
         return {
@@ -135,8 +173,9 @@ class Move:
             "power": self.power,
             "pp": self.pp,
             "accuracy": self.accuracy,
-            "type": self.type
+            "move_type": self.move_type 
         }
+
 
 
    
@@ -199,6 +238,9 @@ class Battle:
     def switch_turn(self):
         # Switch the turn to the other trainer
         pass
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/game-state', methods=['GET'])
 def get_game_state():
@@ -244,54 +286,76 @@ def battle_arena():
 
 @app.route('/choose-trainer', methods=['POST'])
 def choose_trainer():
-    trainer_name = request.json.get('trainer_name')
+    trainer_name = request.form.get('trainer_name')
     if not trainer_name:
         return jsonify({'error': 'Trainer name is required'}), 400
 
-    session_id = trainer_name  
-
-    if session_id in game_state['trainers']:
-        return jsonify({'error': 'This session already has a trainer'}), 400
-
+     
     if trainer_name in (trainer.trainer_name for trainer in game_state['trainers'].values()):
         return jsonify({'error': 'Trainer name is already taken'}), 400
 
-    new_trainer = Trainer(trainer_name, session_id)
-    game_state['trainers'][session_id] = new_trainer
-
+    new_trainer = Trainer(trainer_name)
+    game_state['trainers'][new_trainer.session_id] = new_trainer
     game_state['queue'].put(new_trainer)
-    return jsonify({'message': 'Trainer created successfully', 'trainer_name': trainer_name}), 200
+
+
+    return render_template_string(
+        '''
+        <h2 id="trainer-name-display" 
+            data-trainer-name="{{ trainer_name }}" 
+            data-session-id="{{ session_id }}">
+            Welcome, {{ trainer_name }}!
+        </h2>
+        ''',
+        trainer_name=trainer_name,
+        session_id=new_trainer.session_id
+    )
 
 
 @app.route('/select-pokemon', methods=['GET', 'POST'])
 def select_pokemon():
-    session_id = request.cookies.get('session')
+  
+  
     if request.method == 'GET':
+        try:
+            pokemon_objects = fetch_random_pokemon(20)
+            index = 0
+            for pokemon in pokemon_objects:
+                pokemon.index = index
+                index += 1
 
-        pokemon_list = fetch_random_pokemon(20)
-        session['available_pokemon'] = pokemon_list
-        return jsonify(pokemon_list)
+            pokemon_list_serializable = [pokemon.to_dict() for pokemon in pokemon_objects]
+            return jsonify(pokemon_list_serializable)
+        except Exception as e:
+            print(f"An error occurred during GET: {e}")
+            return jsonify({'error': 'An error occurred while fetching Pokémon data'}), 500
+
     elif request.method == 'POST':
+        try:
+            selected_pokemon_ids = request.json.get('selected_pokemon')
+            if not selected_pokemon_ids:
+                return jsonify({'error': 'No Pokémon selected'}), 400
+            if len(selected_pokemon_ids) != 5:
+                return jsonify({'error': 'Incorrect number of Pokémon selected'}), 400
+            
+            trainer = request.json.get('session_id')
+            if not trainer:
+                return jsonify({'error': 'Trainer not found'}), 404
 
-        selected_pokemon_ids = request.json.get('selected_pokemon')
-        if not selected_pokemon_ids:
-            return jsonify({'error': 'No Pokémon selected'}), 400
-        if len(selected_pokemon_ids) != 5: 
-            return jsonify({'error': 'Incorrect number of Pokémon selected'}), 400
+            # Clear the current team before adding new selections
+            trainer.team.clear()
 
-        trainer = game_state['trainers'].get(session_id)
-        if not trainer:
-            return jsonify({'error': 'Trainer not found'}), 404
-        
-        for pokemon_id in selected_pokemon_ids:
-            pokemon_data = Pokemon.fetch_pokemon_data(pokemon_id)
-            if pokemon_data:
-                trainer.team.append(pokemon_data)
-            else:
+            for pokemon_id in selected_pokemon_ids:
+                pokemon_data = Pokemon.fetch_pokemon_data(pokemon_id)
+                if pokemon_data:
+                    trainer.team.append(pokemon_data)
+                else:
+                    return jsonify({'error': f'Pokémon with id {pokemon_id} not found'}), 404
 
-                return jsonify({'error': f'Pokémon with id {pokemon_id} not found'}), 404
-        
-        return jsonify({'message': 'Pokémon selected successfully'}), 200
+            return jsonify({'message': 'Pokémon selected successfully'}), 200
+        except Exception as e:
+            print(f"An error occurred during POST: {e}")
+            return jsonify({'error': 'An error occurred during Pokémon selection'}), 500
 
 
 
