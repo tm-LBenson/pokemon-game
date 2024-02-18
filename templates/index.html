@@ -10,9 +10,9 @@
     <script src="https://unpkg.com/htmx.org"></script>
   </head>
   <body>
-    <div class="grid-container">
+    <div class="grid-container border">
       <!-- Trainer Registration -->
-      <div id="trainer-registration">
+      <div class="border" id="trainer-registration">
         <h2 id="trainer-name-display">Register as Trainer</h2>
         <form
           hx-post="/choose-trainer"
@@ -30,24 +30,34 @@
       </div>
 
       <!-- Pokémon Selection -->
-      <div id="pokemon-selection" class="pokemon-selection"></div>
+      <div id="pokemon-selection" class="pokemon-selection border">
+        <section class="" id="selected">
+          <h2>Selected Pokemon:</h2>
+        </section>
+        <section class="" id="remaining-pokemon">
+          <h2>Avaiable Pokemon:</h2>
+        </section>
+      </div>
 
       <!-- Battle Area -->
-      <div id="battle-area" class="battle-area">
+      <div id="battle-area" class="battle-area border">
         <h2>Battle Area</h2>
         <div class="battle-status">
           <!-- Updated via SocketIO -->
         </div>
       </div>
-
+      <!-- Pokémon Selection -->
+      <div id="message-output" class="message-output border">
+        <h2>Battle Output:</h2>
+      </div>
       <!-- Queue Status -->
-      <div id="queue-status" class="queue-status">
+      <div id="queue-status" class="queue-status border">
         <h2>Queue to Battle</h2>
         <!-- Updated via SocketIO -->
       </div>
 
       <!-- Chat Window -->
-      <div id="chat-window" class="chat-window">
+      <div id="chat-window" class="chat-window border">
         <h2>Chat</h2>
         <div>
           <div id="chat-messages">

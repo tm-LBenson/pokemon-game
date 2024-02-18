@@ -30,8 +30,8 @@ body {
   grid-template-areas:
     'top top top top'
     'queue main main chat'
-    'queue main main chat'
-    'queue selection selection chat';
+    'selection main main chat'
+    'selection output output chat';
 }
 
 .queue-status {
@@ -39,21 +39,31 @@ body {
 }
 #pokemon-selection {
   grid-area: selection;
+  display: flex;
+  flex-direction: column;
 }
-
+.message-output {
+  grid-area: output;
+}
 #trainer-registration {
   grid-area: top;
   display: flex;
   flex-direction: column;
   padding: 0 0 15px 15px;
+  gap: 10px;
 }
-#trainer-registration,
-.pokemon-selection,
-.battle-area,
-.queue-status,
-.chat-window {
+
+.border {
   border: 1px solid #ccc;
   border-radius: 5px;
+}
+#selected,
+#remaining-pokemon {
+  flex: 1;
+  overflow-y: auto;
+}
+#selected {
+  border-bottom: 1px solid #ccc;
 }
 
 .battle-area {
