@@ -49,16 +49,22 @@
       <!-- Chat Window -->
       <div id="chat-window" class="chat-window">
         <h2>Chat</h2>
-        <div id="chat-messages">
-          <!-- Messages will be appended here -->
-          {% for message in message_history %}
-          <p>{{ message.message }}</p>
-          {% endfor %}
+        <div>
+          <div id="chat-messages">
+            <!-- Messages will be appended here -->
+            {% for message in message_history %}
+            <p>{{ message.message }}</p>
+            {% endfor %}
+          </div>
+          <form id="send-button">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Type a message..."
+            />
+            <button>Send</button>
+          </form>
         </div>
-        <form id="send-button">
-          <input type="text" id="chat-input" placeholder="Type a message..." />
-          <button>Send</button>
-        </form>
       </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>

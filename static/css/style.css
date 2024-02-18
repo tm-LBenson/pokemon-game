@@ -1,17 +1,42 @@
 body,
+* {
+  box-sizing: border-box;
+}
 html {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  max-width: 100vw;
 }
-
+html,
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .grid-container {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 2fr 2fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr;
   gap: 10px;
-  height: 100vh;
+  height: 100%;
   padding: 10px;
+  grid-template-areas:
+    'top top top top'
+    'queue main main chat'
+    'queue main main chat'
+    'queue main main chat';
+}
+
+.queue-status {
+  grid-area: queue;
+}
+
+#trainer-registration,
+#pokemon-selection {
+  padding: 20px;
+  grid-area: top;
 }
 
 .pokemon-selection,
@@ -25,7 +50,7 @@ html {
 }
 
 .battle-area {
-  grid-column: 1 / 3;
+  grid-area: main;
   display: flex;
   flex-direction: column;
 }
@@ -36,6 +61,16 @@ html {
 }
 
 .chat-window {
-  grid-column: 3 / 4;
-  grid-row: 1 / 3;
+  grid-area: chat;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  text-wrap: wrap;
+  width: 300px;
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+}
+.message {
+  float: left;
 }

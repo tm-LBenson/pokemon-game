@@ -26,7 +26,7 @@ socket.on('receive_message', (data) => {
   const messageElement = document.createElement('div');
   messageElement.innerHTML = `
     <div>
-      <strong>${data.username}</strong>: ${data.message}
+      <p ><strong><span class="message">${data.username}: </strong>${data.message}</span></p>
     </div>`;
   chatMessages.appendChild(messageElement);
 });
