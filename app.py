@@ -12,7 +12,7 @@ from flask_socketio import SocketIO, emit
 app = Flask(__name__)
 CORS(app)
 
-# socketio = SocketIO(app)
+socketio = SocketIO(app)
 
 
 
@@ -20,13 +20,13 @@ app.secret_key = 'your_secret_key'
 queue_lock = Lock()
 
 message_history = []
-# @socketio.on('connect')
+@socketio.on('connect')
 def on_connect():
 
     for message_data in message_history:
         emit('receive_message', message_data)
 
-# @socketio.on('send_message')
+@socketio.on('send_message')
 def handle_send_message_event(data):
     message_history.append({
         'message': data['message'],
@@ -76,13 +76,12 @@ def match_players():
             battle_id = f"{trainer1.session_id}:{trainer2.session_id}"
             game_state['battles'][battle_id] = new_battle
             
-            # socketio.emit('battle_start', {'battle_id': battle_id}, room=trainer1.session_id)
-            # socketio.emit('battle_start', {'battle_id': battle_id}, room=trainer2.session_id)
+            socketio.emit('battle_start', {'battle_id': battle_id}, room=trainer1.session_id)
+            socketio.emit('battle_start', {'battle_id': battle_id}, room=trainer2.session_id)
 
 
 def init_matchmaking():
-    # socketio.start_background_task(match_players)
-    print("match making function running")
+    socketio.start_background_task(match_players)
 
 
 init_matchmaking()
@@ -277,8 +276,8 @@ def battle_arena():
     if session_id == battle.turn:
 
         battle.turn = battle.trainer1.session_id if session_id == battle.trainer2.session_id else battle.trainer2.session_id
-        # socketio.emit('battle_update', battle.to_json(), room=battle.trainer1.session_id)
-        # socketio.emit('battle_update', battle.to_json(), room=battle.trainer2.session_id)
+        socketio.emit('battle_update', battle.to_json(), room=battle.trainer1.session_id)
+        socketio.emit('battle_update', battle.to_json(), room=battle.trainer2.session_id)
         return jsonify({'message': 'Turn completed'}), 200
     else:
         return jsonify({'error': 'Not your turn'}), 403
