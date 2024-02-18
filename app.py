@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, request, render_template,render_template_string
+import eventlet
+eventlet.monkey_patch()
+from flask import Flask, jsonify, request, render_template, render_template_string
 import random
 from threading import Lock
 from queue import Queue
