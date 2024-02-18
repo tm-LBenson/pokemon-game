@@ -17,8 +17,6 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
 
 
-
-
 app.secret_key = 'your_secret_key'  
 queue_lock = Lock()
 

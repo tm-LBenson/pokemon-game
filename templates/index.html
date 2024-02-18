@@ -55,9 +55,10 @@
           <p>{{ message.message }}</p>
           {% endfor %}
         </div>
-
-        <input type="text" id="chat-input" placeholder="Type a message..." />
-        <button id="send-button">Send</button>
+        <form>
+          <input type="text" id="chat-input" placeholder="Type a message..." />
+          <button id="send-button">Send</button>
+        </form>
       </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
