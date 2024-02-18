@@ -12,7 +12,8 @@ from flask_socketio import SocketIO, emit
 app = Flask(__name__)
 CORS(app)
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+
 
 
 
