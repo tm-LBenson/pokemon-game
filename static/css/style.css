@@ -9,6 +9,11 @@ html {
   box-sizing: border-box;
   max-width: 100vw;
 }
+
+body {
+  background-color: lightyellow;
+}
+
 html,
 body {
   display: flex;
@@ -17,8 +22,8 @@ body {
 }
 .grid-container {
   display: grid;
-  grid-template-columns: 1fr 2fr 2fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.5fr 2fr 2fr 1fr;
+  grid-template-rows: 0.5fr 1.5fr 1fr 1fr;
   gap: 10px;
   height: 100%;
   padding: 10px;
@@ -26,27 +31,29 @@ body {
     'top top top top'
     'queue main main chat'
     'queue main main chat'
-    'queue main main chat';
+    'queue selection selection chat';
 }
 
 .queue-status {
   grid-area: queue;
 }
-
-#trainer-registration,
 #pokemon-selection {
-  padding: 20px;
-  grid-area: top;
+  grid-area: selection;
 }
 
+#trainer-registration {
+  grid-area: top;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 15px 15px;
+}
+#trainer-registration,
 .pokemon-selection,
 .battle-area,
 .queue-status,
 .chat-window {
   border: 1px solid #ccc;
   border-radius: 5px;
-  padding: 10px;
-  overflow: auto;
 }
 
 .battle-area {
@@ -61,15 +68,19 @@ body {
 }
 
 .chat-window {
+  padding: 5px;
   grid-area: chat;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  height: 100%;
+  justify-content: space-between;
   text-wrap: wrap;
   width: 300px;
   overflow-x: hidden;
   overflow-wrap: break-word;
+}
+
+#chat-messages {
+  justify-self: flex-end;
 }
 .message {
   float: left;
