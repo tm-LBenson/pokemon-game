@@ -4,7 +4,7 @@ certifi==2024.2.2
 charset-normalizer==3.3.2
 click==8.1.7
 dnspython==2.6.0
-eventlet==0.35.1
+eventlet==0.33.0
 Flask==3.0.2
 Flask-Cors==4.0.0
 Flask-SocketIO==5.3.6
